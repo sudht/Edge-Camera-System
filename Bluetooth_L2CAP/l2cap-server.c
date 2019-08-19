@@ -7,84 +7,89 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define MAXBUF 1024
+#define MAXBUF 672
 
 int main(int argc, char **argv)
 {
-        struct sockaddr_l2 loc_addr = { 0 }, rem_addr = { 0 };
-        char buf[MAXBUF] = { 0 };
-        char file_name[MAXBUF];
-        int s, client, bytes_read;
-        int read_len, des_fd, file_read_len;
-        socklen_t opt = sizeof(rem_addr);
+	struct sockaddr_l2 loc_addr = { 0 }, rem_addr = { 0 };
+	char buf[MAXBUF] = { 0 };
+	char file_name[MAXBUF];
+	int s, client, bytes_read;
+	int read_len, des_fd, file_read_len;
+	float angle;
+	int counter = 0;
+	socklen_t opt = sizeof(rem_addr);
 
-        // allocate socket
-        s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
 
-        // bind socket to port 0x1001 of the first available
-        // bluetooth adapter
-        loc_addr.l2_family = AF_BLUETOOTH;
-        loc_addr.l2_bdaddr = *BDADDR_ANY;
-        loc_addr.l2_psm = htobs(0x1001);
+	// allocate socket
+	s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+	// bind socket to port 0x1001 of the first available
+	// bluetooth adapter
+	loc_addr.l2_family = AF_BLUETOOTH;
+	loc_addr.l2_bdaddr = *BDADDR_ANY;
+	loc_addr.l2_psm = htobs(0x1001);
 
-        bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
+	bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
+	// put socket into listening mode
+	// listen(s, 1);
 
-        // put socket into listening mode
-        listen(s, 1);
+	while (1) {
+		printf("Listening....\n");
+		listen(s, 1);
 
-        while (1) {
-                // accept one connection
-                client = accept(s, (struct sockaddr *)&rem_addr, &opt);
+		// accept one connection
+		client = accept(s, (struct sockaddr *)&rem_addr, &opt);
 
-                ba2str(&rem_addr.l2_bdaddr, buf);
-                fprintf(stderr, "accepted connection from %s\n", buf);
+		ba2str(&rem_addr.l2_bdaddr, buf);
+		fprintf(stderr, "accepted connection from %s\n", buf);
 
-                memset(buf, 0, MAXBUF);
+		memset(buf, 0, MAXBUF);
 
-                read_len = read(client, buf, MAXBUF);
-                if (read_len > 0) {
-                        strcpy(file_name, buf);
-                        printf("%s\n",  file_name);
-                }
-                else {
-                        close(client);
-                        break;
-                }
+		strcat(buf, "1=50 2=50");
 
-         FILE_OPEN:
-                des_fd = open(file_name, O_WRONLY | O_CREAT | O_EXCL, 0700);
-                if (!des_fd) {
-                        perror("file open error : ");
-                        break;
-                }
-                if (errno == EEXIST) {
-                        close(des_fd);
-                        goto FILE_OPEN;
-                }
+		if(send(client, buf, MAXBUF, 0) == -1) {
+			perror("Error : ");
+		}
 
-                while (1) {
-                        memset(buf, 0x00, MAXBUF);
-                        file_read_len = read(client, buf, MAXBUF);
-                        write(des_fd, buf, file_read_len);
-                        if (file_read_len == EOF | file_read_len == 0) {
-                                printf("finish file\n");
-                                break;
-                        }
-                }
-                close(client);
-                close(des_fd);
-        }
-        close(s);
+		memset(buf, 0, MAXBUF);
 
-        /*
-        // read data from the client
-        bytes_read = read(client, buf, MAXBUF);
-        if (bytes_read > 0) {
-                printf("received [%s]\n", buf);
-        }
+		read_len = read(client, buf, MAXBUF);
+		if (read_len > 0) {
+			strcpy(file_name, buf);
+			printf("%s\n",  file_name);
+		}
+		else {
+			close(client);
+			break;
+		}
 
-        // close connection
-        close(client);
-        close(s);
-        */
+	FILE_OPEN:
+		des_fd = open(file_name, O_WRONLY | O_CREAT | O_EXCL, 0700);
+		if (!des_fd) {
+			perror("file open error : ");
+			break;
+		}
+		if (errno == EEXIST) {
+			close(des_fd);
+			printf("Go to FILE_OPEN\n");
+			goto FILE_OPEN;
+		}
+
+		while (1) {
+			printf("1\n");
+			memset(buf, 0x00, MAXBUF);
+			printf("2\n");
+			file_read_len = read(client, buf, MAXBUF);
+			printf("3\n");
+			write(des_fd, buf, file_read_len);
+			printf("file len %d\n", file_read_len);
+			if (file_read_len == EOF | file_read_len == 0) {
+				printf("finish file\n");
+				break;
+			}
+		}
+		close(client);
+		close(des_fd);
+	}
+	close(s);
 }
