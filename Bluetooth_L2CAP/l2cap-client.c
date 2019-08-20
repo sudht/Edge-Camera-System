@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 {
 	struct sockaddr_l2 addr = { 0 };
 	char buf[BUF_SIZE];
-	char file_name[BUF_SIZE];
+	char file_name[19];
 	int sourse_fd;
 	int file_name_len, read_len;
 	int s, status;
@@ -33,17 +33,18 @@ int main(int argc, char **argv)
 	str2ba(dest, &addr.l2_bdaddr);
 
 	// connect to server
+	// status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
 	status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
-
 
 	while(1) {
 		memset(buf, 0x00, BUF_SIZE);
-		memset(file_name, 0x00, BUF_SIZE);
-	
+		memset(file_name, 0x00, 19);
+
 		// read Angle
-		printf("Reanding....\n");
+		printf("Reading....\n");
 		read_len = read(s, buf, BUF_SIZE);
-		//printf("%s\n", buf);
+		// if (read_len == 0)	continue;
+		// printf("%s\n", buf);
 
 		// send Angle
 		setAngle(buf);
@@ -70,6 +71,8 @@ int main(int argc, char **argv)
 			if (status < 0) perror("uh oh");
 			if (read_len == 0)	break;
 		}
+		memset(buf, 0x00, 0);
+		status = write(s, buf, 0);
 	}
 
 	close(s);
