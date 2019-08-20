@@ -3,37 +3,43 @@
 #include <time.h>
 #include <unistd.h>
 
-void getTime(char * time_buf) {
-	time_t t = time(NULL);
-	struct tm tm = *localtime(&t);
+#define GMT (+9)
 
+void getTime(char * time_buf) {
+	time_t rawtime;
+	struct tm* tm;
 	char temp[10];
+
+	time(&rawtime);
+	tm = gmtime(&rawtime);
+
 	memset(time_buf, 0x00, 50);
 	memset(temp, 0x00, 10);
 
-	sprintf(temp, "%d", tm.tm_year+1900);
+	sprintf(temp, "%d", tm->tm_year+1900);
 	strcat(time_buf, temp);
 	memset(temp, 0x00, 10);
 
-	sprintf(temp, "%d", tm.tm_mon+1);
+	sprintf(temp, "%02d", tm->tm_mon+1);
 	strcat(time_buf, temp);
 	memset(temp, 0x00, 10);
 
-	sprintf(temp, "%d", tm.tm_mday);
+	sprintf(temp, "%02d", tm->tm_mday);
 	strcat(time_buf, temp);
 	memset(temp, 0x00, 10);
 
+	// insert _ for 19700101_010101
 	strcat(time_buf, "_");
 
-	sprintf(temp, "%d", tm.tm_hour);
+	sprintf(temp, "%02d", (tm->tm_hour + GMT) %24 );
 	strcat(time_buf, temp);
 	memset(temp, 0x00, 10);
 
-	sprintf(temp, "%d", tm.tm_min);
+	sprintf(temp, "%02d", tm->tm_min);
 	strcat(time_buf, temp);
 	memset(temp, 0x00, 10);
 
-	sprintf(temp, "%d", tm.tm_sec);
+	sprintf(temp, "%02d", tm->tm_sec);
 	strcat(time_buf, temp);
 }
 
