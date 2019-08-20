@@ -20,7 +20,6 @@ int main(int argc, char **argv)
 	int counter = 0;
 	socklen_t opt = sizeof(rem_addr);
 
-
 	// allocate socket
 	s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
 	// bind socket to port 0x1001 of the first available
@@ -33,25 +32,28 @@ int main(int argc, char **argv)
 	// put socket into listening mode
 	// listen(s, 1);
 
+	printf("Listening....\n");
+	listen(s, 1);
+	// accept one connection
+	client = accept(s, (struct sockaddr *)&rem_addr, &opt);
+	ba2str(&rem_addr.l2_bdaddr, buf);
+	fprintf(stderr, "accepted connection from %s\n", buf);
+	fprintf(stderr, "accepted connection from %s\n", buf);
+
 	while (1) {
-		printf("Listening....\n");
-		listen(s, 1);
-
-		// accept one connection
-		client = accept(s, (struct sockaddr *)&rem_addr, &opt);
-
-		ba2str(&rem_addr.l2_bdaddr, buf);
-		fprintf(stderr, "accepted connection from %s\n", buf);
-
 		memset(buf, 0, MAXBUF);
+		printf("(1)Pan 5~95, (2)Tilt 30~95  ex)1=50 2=50\nInput: ");
+		scanf("%[^\n]s", &buf);
+		getchar();
 
-		strcat(buf, "1=50 2=50");
+		// strcat(buf, "1=50 2=50");
 
 		if(send(client, buf, MAXBUF, 0) == -1) {
 			perror("Error : ");
 		}
 
 		memset(buf, 0, MAXBUF);
+		// send(client, buf, 0, 0);
 
 		read_len = read(client, buf, MAXBUF);
 		if (read_len > 0) {
@@ -63,7 +65,7 @@ int main(int argc, char **argv)
 			break;
 		}
 
-	FILE_OPEN:
+		FILE_OPEN:
 		des_fd = open(file_name, O_WRONLY | O_CREAT | O_EXCL, 0700);
 		if (!des_fd) {
 			perror("file open error : ");
@@ -76,20 +78,16 @@ int main(int argc, char **argv)
 		}
 
 		while (1) {
-			printf("1\n");
 			memset(buf, 0x00, MAXBUF);
-			printf("2\n");
 			file_read_len = read(client, buf, MAXBUF);
-			printf("3\n");
 			write(des_fd, buf, file_read_len);
-			printf("file len %d\n", file_read_len);
 			if (file_read_len == EOF | file_read_len == 0) {
 				printf("finish file\n");
 				break;
 			}
 		}
-		close(client);
 		close(des_fd);
 	}
+	close(client);
 	close(s);
 }
