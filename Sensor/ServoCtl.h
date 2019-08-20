@@ -29,17 +29,18 @@ void setAngle(char * angles) {
 	char angle_TILT[10];
 	char buf[672];
 
+        // ptr -> "1=50"
+	char *ptr = strtok(angles, " ");
+
 	memset(angle_PAN, 0x00, 10);
 	memset(angle_TILT, 0x00, 10);
 
-        // ptr -> "1=50"
-        char *ptr = strtok(angles, " ");
-        printf("%s\n", ptr);
+	printf("%s ", ptr);
 	strcat(angle_PAN, ptr);
 
         ///ptr -> "2=30"
-        ptr = strtok(NULL, " ");
-        printf("%s\n", ptr);
+	ptr = strtok(NULL, " ");
+	printf("%s\n", ptr);
 	strcat(angle_TILT, ptr);
 
 
@@ -49,16 +50,16 @@ void setAngle(char * angles) {
 	// set angle_PAN
 	memset(buf, 0x00, 672);
 	strcat(buf, "echo ");
-        strcat(buf, angle_PAN);
-        strcat(buf, "% > /dev/servoblaster");
+	strcat(buf, angle_PAN);
+	strcat(buf, "% > /dev/servoblaster");
 	system(buf);
 	printf("angle_PAN %s\n", buf);
 
 	// set angle_TILT
 	memset(buf, 0x00, 672);
-        strcat(buf, "echo ");
-        strcat(buf, angle_TILT);
-        strcat(buf, "% > /dev/servoblaster");
+	strcat(buf, "echo ");
+	strcat(buf, angle_TILT);
+	strcat(buf, "% > /dev/servoblaster");
 	system(buf);
 	printf("angle_TILT %s\n", buf);
 
@@ -66,6 +67,9 @@ void setAngle(char * angles) {
 	sleep(1);
 
 	// off servoblaster (save power)
-        system("sudo killall servod");
+	system("sudo killall servod");
 
+	// sudo ./servod
+	// echo 1=10% > /dev/servoblaster
+	// sudo killall servod
 }
