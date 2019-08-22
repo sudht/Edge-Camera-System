@@ -1,62 +1,65 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/l2cap.h>
-#include <fcntl.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 #include "PiCamera.h"
 #include "ServoCtl.h"
 
-#define BUF_SIZE 672
-#define PAN 12
-#define TILT 13
+#define MAXBUF 672
 
 int main(int argc, char **argv)
 {
-	struct sockaddr_l2 addr = { 0 };
-	char buf[BUF_SIZE];
-	char file_name[19];
-	int sourse_fd;
-	int file_name_len, read_len;
-	int s, status;
-	char *ptr;
-	char dest[18] = "B8:27:EB:75:79:7A";
+	struct sockaddr_l2 loc_addr = { 0 }, rem_addr = { 0 };
+	char buf[MAXBUF] = { 0 };
+	char file_name[21];
+	int s, client, bytes_read, status, sourse_fd;
+	int file_name_len, read_len, des_fd, file_read_len;
+	float angle;
+	int counter = 0;
+	int slave = 0;
+	socklen_t opt = sizeof(rem_addr);
 
-	// allocate a socket
+	// bind socket to port 0x1001 of the first available
+	// bluetooth adapter
+	loc_addr.l2_family = AF_BLUETOOTH;
+	loc_addr.l2_bdaddr  = *BDADDR_ANY;
+	loc_addr.l2_psm = htobs(0x1001);
 	s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+	bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
 
-	// set the connection parameters (who to connect to)
-	addr.l2_family = AF_BLUETOOTH;
-	addr.l2_psm = htobs(0x1001);
-	str2ba(dest, &addr.l2_bdaddr);
+	// put socket into listening mode
+	// listen(s, 1);
 
-	// connect to server
-	// status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
-	status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
+	while (1) {
+		printf("Listening....\n");
+		listen(s, 1);
+		// accept one connection
+		client = accept(s, (struct sockaddr *)&rem_addr, &opt);
+		ba2str(&rem_addr.l2_bdaddr, buf);
+		fprintf(stderr, "accepted connection from %s\n", buf);
 
-	while(1) {
-		memset(buf, 0x00, BUF_SIZE);
-		memset(file_name, 0x00, 19);
+		memset(buf, 0, MAXBUF);
+		memset(file_name, 0x00, 21);
 
 		// read Angle
 		printf("Reading....\n");
-		read_len = read(s, buf, BUF_SIZE);
-		// if (read_len == 0)	continue;
-		// printf("%s\n", buf);
+		read_len = read(client, buf, MAXBUF);
 
-		// send Angle
+		// set Angle
 		setAngle(buf);
 
 		// take Picture
 		takePic(file_name);
 
-		memset(buf, 0x00, BUF_SIZE);
+		memset(buf, 0x00, MAXBUF);
 		printf("File Name : %s\n", file_name);
 		file_name_len = strlen(file_name);
 
-		status = write(s, file_name, file_name_len);
+		status = send(client, file_name, file_name_len, 0);
 
 		sourse_fd = open(file_name, O_RDONLY);
 		if (!sourse_fd) {
@@ -65,15 +68,17 @@ int main(int argc, char **argv)
 		}
 
 		while (1) {
-			memset(buf, 0x00, BUF_SIZE);
-			read_len = read(sourse_fd, buf, BUF_SIZE);
-			status = write(s, buf, BUF_SIZE);
+			memset(buf, 0x00, MAXBUF);
+			read_len = read(sourse_fd, buf, MAXBUF);
+			status = send(client, buf, MAXBUF, 0);
 			if (status < 0) perror("uh oh");
 			if (read_len == 0)	break;
 		}
 		memset(buf, 0x00, 0);
 		status = write(s, buf, 0);
-	}
 
+		close(client);
+	}
+	close(client);
 	close(s);
 }
