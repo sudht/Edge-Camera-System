@@ -11,57 +11,55 @@
 
 int main(int argc, char **argv)
 {
-	struct sockaddr_l2 loc_addr = { 0 }, rem_addr = { 0 };
+	struct sockaddr_l2 addr = { 0 };
 	char buf[MAXBUF] = { 0 };
 	char file_name[MAXBUF];
-	int s, client, bytes_read;
+	int s, client, bytes_read, status;
 	int read_len, des_fd, file_read_len;
 	float angle;
 	int counter = 0;
-	socklen_t opt = sizeof(rem_addr);
+	int slave = 0;
+	char dest[2][18] = { "B8:27:EB:66:87:00", "B8:27:EB:66:A2:37"};
 
-	// allocate socket
-	s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+	printf("Input slave num (0 or 1): ");
+	scanf("%d", &slave);
+	getchar();
+	printf("%d\n", slave);
+
 	// bind socket to port 0x1001 of the first available
 	// bluetooth adapter
-	loc_addr.l2_family = AF_BLUETOOTH;
-	loc_addr.l2_bdaddr = *BDADDR_ANY;
-	loc_addr.l2_psm = htobs(0x1001);
+	addr.l2_family = AF_BLUETOOTH;
+	str2ba(dest[slave], &addr.l2_bdaddr);
+	addr.l2_psm = htobs(0x1001);
 
-	bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
-	// put socket into listening mode
-	// listen(s, 1);
-
-	printf("Listening....\n");
-	listen(s, 1);
 	// accept one connection
-	client = accept(s, (struct sockaddr *)&rem_addr, &opt);
-	ba2str(&rem_addr.l2_bdaddr, buf);
-	fprintf(stderr, "accepted connection from %s\n", buf);
-	fprintf(stderr, "accepted connection from %s\n", buf);
+	while(1) {
+		s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
 
-	while (1) {
-		memset(buf, 0, MAXBUF);
+		// set the connection parameters (who to connect to)
+		status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
+		if(status == -1) {
+			printf("Connection Error!\n");
+			continue;
+		}
+
 		printf("(1)Pan 5~95, (2)Tilt 30~95  ex)1=50 2=50\nInput: ");
 		scanf("%[^\n]s", &buf);
 		getchar();
 
-		// strcat(buf, "1=50 2=50");
-
-		if(send(client, buf, MAXBUF, 0) == -1) {
+		if(write(s, buf, MAXBUF) == -1) {
 			perror("Error : ");
 		}
 
 		memset(buf, 0, MAXBUF);
-		// send(client, buf, 0, 0);
 
-		read_len = read(client, buf, MAXBUF);
+		read_len = read(s, buf, MAXBUF);
 		if (read_len > 0) {
 			strcpy(file_name, buf);
 			printf("%s\n",  file_name);
 		}
 		else {
-			close(client);
+			perror("Error : ");
 			break;
 		}
 
@@ -79,15 +77,15 @@ int main(int argc, char **argv)
 
 		while (1) {
 			memset(buf, 0x00, MAXBUF);
-			file_read_len = read(client, buf, MAXBUF);
+			file_read_len = read(s, buf, MAXBUF);
 			write(des_fd, buf, file_read_len);
 			if (file_read_len == EOF | file_read_len == 0) {
 				printf("finish file\n");
 				break;
 			}
 		}
-		close(des_fd);
+
+		close(s);
+		break;
 	}
-	close(client);
-	close(s);
 }
