@@ -48,14 +48,14 @@ void takePic(char * file_name) {
 	char buf[672];
 
 	memset(buf, 0x00, 672);
-	strcat(buf, "raspistill -o ");
+	strcat(buf, "raspistill -vf -hf -o ");
 
 	getTime(time_buf);
 	strcat(file_name, time_buf);
-	strcat(file_name, ".jpg");
-	strcat(buf, time_buf);
+	strcat(file_name, "_F.jpg");
+	strcat(buf, file_name);
 
-	strcat(buf, ".jpg -t 1 -w 640 -h 480");
+	strcat(buf, " -t 1 -w 640 -h 480");
 	system(buf);
 	//system("raspistill -o Pub.jpg -t 1 -w 640 -h 480");
 }
