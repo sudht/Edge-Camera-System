@@ -73,3 +73,4 @@ void setAngle(char * angles) {
 	// echo 1=10% > /dev/servoblaster
 	// sudo killall servod
 }
+
